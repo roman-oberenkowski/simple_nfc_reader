@@ -60,8 +60,6 @@
 #include <nfc/nfc.h>
 #include <nfc/nfc-types.h>
 
-#include "utils/nfc-utils.h"
-
 #define MAX_DEVICE_COUNT 16
 
 static nfc_device *pnd = NULL;
@@ -73,13 +71,19 @@ long int get_num_uid(const uint8_t *pbtData, const size_t szBytes)
   long int numeric_id=0;
   long int multi=1;
   for (szPos = szBytes-1; szPos >=0; szPos--) {
-    //printf("%02x  ", pbtData[szPos]);
-    //printf("%d ", pbtData[szPos]);
     numeric_id+=multi*pbtData[szPos];
     multi*=256;
   }
-  //printf("\n");
   return numeric_id;
+}
+void print_hex(const uint8_t *pbtData, const size_t szBytes)
+{
+    int  szPos;
+
+    for (szPos = 0; szPos < szBytes; szPos++) {
+        printf("%02x  ", pbtData[szPos]);
+        //printf("%d ", pbtData[szPos]);
+    }
 }
 
 static void stop_polling(int sig)
@@ -123,14 +127,14 @@ main(int argc, const char *argv[])
 
   nfc_init(&context);
   if (context == NULL) {
-    ERR("Unable to init libnfc (malloc)");
+    perror("Unable to init libnfc (malloc)");
     exit(EXIT_FAILURE);
   }
 
   pnd = nfc_open(context, NULL);
 
   if (pnd == NULL) {
-    ERR("%s", "Unable to open NFC device.");
+    printf("%s", "Unable to open NFC device.");
     nfc_exit(context);
     exit(EXIT_FAILURE);
   }
