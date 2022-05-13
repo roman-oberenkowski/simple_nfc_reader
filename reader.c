@@ -1,6 +1,6 @@
 /*-
  * Modifications : Roman Oberenkowski, Pawel Szalczyk (for ASB project)
- * 
+ *
  * Original example by:
  * Free/Libre Near Field Communication (NFC) library
  *
@@ -34,7 +34,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Note that this license only applies on the examples, NFC library itself is under LGPL
+ * Note that this license only applies on the examples, NFC library itself is
+ * under LGPL
  *
  */
 
@@ -44,51 +45,50 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#  include "config.h"
+#include "config.h"
 #endif // HAVE_CONFIG_H
 
 #include <err.h>
 #include <inttypes.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <signal.h>
 
-#include <nfc/nfc.h>
 #include <nfc/nfc-types.h>
+#include <nfc/nfc.h>
 
 #define MAX_DEVICE_COUNT 16
 
 static nfc_device *pnd = NULL;
 static nfc_context *context;
 
-long int get_num_uid(const uint8_t *pbtData, const size_t szBytes)
-{
-  int  szPos;
-  long int numeric_id=0;
-  long int multi=1;
-  for (szPos = szBytes-1; szPos >=0; szPos--) {
-    numeric_id+=multi*pbtData[szPos];
-    multi*=256;
+const bool human_readable_output = false;
+
+long int get_num_uid(const uint8_t *pbtData, const size_t szBytes) {
+  int szPos;
+  long int numeric_id = 0;
+  long int multi = 1;
+  for (szPos = szBytes - 1; szPos >= 0; szPos--) {
+    numeric_id += multi * pbtData[szPos];
+    multi *= 256;
   }
   return numeric_id;
 }
-void print_hex(const uint8_t *pbtData, const size_t szBytes)
-{
-    int  szPos;
 
-    for (szPos = 0; szPos < szBytes; szPos++) {
-        printf("%02x  ", pbtData[szPos]);
-        //printf("%d ", pbtData[szPos]);
-    }
+void print_hex(const uint8_t *pbtData, const size_t szBytes) {
+  int szPos;
+
+  for (szPos = 0; szPos < szBytes; szPos++) {
+    printf("%02x  ", pbtData[szPos]);
+    // printf("%d ", pbtData[szPos]);
+  }
 }
 
-static void stop_polling(int sig)
-{
-  (void) sig;
+static void stop_polling(int sig) {
+  (void)sig;
   if (pnd != NULL)
     nfc_abort_command(pnd);
   else {
@@ -97,9 +97,7 @@ static void stop_polling(int sig)
   }
 }
 
-int
-main(int argc, const char *argv[])
-{
+int main(int argc, const char *argv[]) {
   bool verbose = false;
 
   signal(SIGINT, stop_polling);
@@ -107,20 +105,21 @@ main(int argc, const char *argv[])
   // Display libnfc version
   const char *acLibnfcVersion = nfc_version();
 
-  printf("Using libnfc %s\n", acLibnfcVersion);
-  printf("Tested on 1.8.0 \n");
+  if (human_readable_output) {
+    printf("Using libnfc %s\n", acLibnfcVersion);
+    printf("Tested on 1.8.0 \n");
+  }
 
   const uint8_t uiPollNr = 20;
   const uint8_t uiPeriod = 2;
-  const nfc_modulation nmModulations[6] = {
-    { .nmt = NMT_ISO14443A, .nbr = NBR_106 },
-    { .nmt = NMT_ISO14443B, .nbr = NBR_106 },
-    { .nmt = NMT_FELICA, .nbr = NBR_212 },
-    { .nmt = NMT_FELICA, .nbr = NBR_424 },
-    { .nmt = NMT_JEWEL, .nbr = NBR_106 },
-    { .nmt = NMT_ISO14443BICLASS, .nbr = NBR_106 },
+  const nfc_modulation nmModulations[] = {
+      {.nmt = NMT_ISO14443A, .nbr = NBR_106},
+      {.nmt = NMT_ISO14443B, .nbr = NBR_106},
+      {.nmt = NMT_FELICA, .nbr = NBR_212},
+      {.nmt = NMT_FELICA, .nbr = NBR_424},
+      {.nmt = NMT_JEWEL, .nbr = NBR_106},
   };
-  const size_t szModulations = 6;
+  const size_t szModulations = sizeof(nmModulations) / sizeof(nfc_modulation);
 
   nfc_target nt;
   int res = 0;
@@ -145,38 +144,52 @@ main(int argc, const char *argv[])
     nfc_exit(context);
     exit(EXIT_FAILURE);
   }
-
-  printf("NFC reader: %s opened\n", nfc_device_get_name(pnd));
-  printf("Waiting for card...\n");
-  while(true){
-  
-  //printf("NFC device will poll during %ld ms (%u pollings of %lu ms for %" PRIdPTR " modulations)\n", (unsigned long) uiPollNr * szModulations * uiPeriod * 150, uiPollNr, (unsigned long) uiPeriod * 150, szModulations);
-  if ((res = nfc_initiator_poll_target(pnd, nmModulations, szModulations, uiPollNr, uiPeriod, &nt))  < 0) {
-    nfc_perror(pnd, "nfc_initiator_poll_target");
-    nfc_close(pnd);
-    nfc_exit(context);
-    exit(EXIT_FAILURE);
+  if (human_readable_output) {
+    printf("NFC reader: %s opened\n", nfc_device_get_name(pnd));
+    printf("Waiting for card...\n");
   }
+  while (true) {
 
-  if (res > 0) {
-    //print_nfc_target(&nt, verbose);
-    printf("DETECTED: \n");
-    printf(" UID (NFCID%c): ", (nt.nti.nai.abtUid[0] == 0x08 ? '3' : '1'));
-    print_hex(nt.nti.nai.abtUid, nt.nti.nai.szUidLen);
-    printf(" Decimal UID: %ld\n",get_num_uid(nt.nti.nai.abtUid, nt.nti.nai.szUidLen));
-    printf("Waiting for card to be removed");
-    fflush(stdout);
-    while (0 == nfc_initiator_target_is_present(pnd, NULL)) {
-    	printf(".");
-    	fflush(stdout);
-    	sleep(0.500);
+    if ((res = nfc_initiator_poll_target(pnd, nmModulations, szModulations,
+                                         uiPollNr, uiPeriod, &nt)) < 0) {
+      if (res == NFC_ECHIP)
+        continue; // my reader timeouts with this code...
+      nfc_perror(pnd, "nfc_initiator_poll_target");
+      printf("revolution");
+      nfc_close(pnd);
+      nfc_exit(context);
+      exit(EXIT_FAILURE);
     }
-    printf("\nCard removed, waiting for next card...\n");
-    //nfc_perror(pnd, "nfc_initiator_target_is_present");
-  } else {
-    //printf("Nothing found, ");
+
+    if (res > 0) {
+      // print_nfc_target(&nt, verbose);
+      if (human_readable_output) {
+        printf("DETECTED: \n");
+        printf(" UID (NFCID%c): ", (nt.nti.nai.abtUid[0] == 0x08 ? '3' : '1'));
+        print_hex(nt.nti.nai.abtUid, nt.nti.nai.szUidLen);
+        printf(" Decimal UID: %ld\n",
+               get_num_uid(nt.nti.nai.abtUid, nt.nti.nai.szUidLen));
+        printf("Waiting for card to be removed");
+        fflush(stdout);
+      } else {
+        printf("%ld\n", get_num_uid(nt.nti.nai.abtUid, nt.nti.nai.szUidLen));
+        fflush(stdout);
+      }
+
+      while (0 == nfc_initiator_target_is_present(pnd, NULL)) {
+        if (human_readable_output) {
+          printf(".");
+          fflush(stdout);
+        }
+        sleep(0.500);
+      }
+      if (human_readable_output) {
+        printf("\nCard removed, waiting for next card...\n");
+      }
+    } else {
+      // printf("Nothing found, ");
+    }
   }
-}
   nfc_close(pnd);
   nfc_exit(context);
   exit(EXIT_SUCCESS);
