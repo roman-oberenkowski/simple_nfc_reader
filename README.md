@@ -1,5 +1,5 @@
 # simple_nfc_reader
-Using libnfc and PN532 in UART mode
+Using libnfc and PN532 in UART mode. Waits for a card and reads its ID printing it in decimal to stdout. Waits untill the card gets removed and then listens for a next one (can be the same card).
 # Installation
 1. Install libnfc library from your distro package manager (and hope it has pn532_uart enabled. Also install -dev version that contain headers). <br />
 On ubuntu: `sudo apt install libnfc-bin libnfc-dev libnfc-examples`  <br />
